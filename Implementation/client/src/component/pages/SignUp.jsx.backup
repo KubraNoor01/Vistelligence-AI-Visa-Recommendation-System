@@ -1,0 +1,397 @@
+import React, { useState, useCallback, memo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from 'axios';
+import { useTheme } from "../../context/ThemeContext";
+import Swal from "sweetalert2";
+import { 
+  FaUser, 
+  FaEnvelope, 
+  FaLock, 
+  FaPhone, 
+  FaUserPlus, 
+  FaSpinner, 
+  FaSignInAlt, 
+  FaGlobe, 
+  FaShieldAlt, 
+  FaCheckCircle, 
+  FaStar
+} from "react-icons/fa";
+import Navbar from "../Layout/Navbar";
+import FloatingParticles from "../Layout/FloatingParticles";
+import PasswordStrength from "../Layout/PasswordStrength";
+import { BASE_URL } from '../../const';
+
+// Memoized InputField component outside to prevent recreation
+const InputField = memo(({ name, type, placeholder, icon, value, error, isTouched, onChange, onBlur, isDarkMode }) => (
+  <div className="relative group">
+    <div className={`absolute top-1/2 left-4 -translate-y-1/2 transition-colors duration-300 ${
+      isDarkMode ? "text-gray-400 group-focus-within:text-green-400" : "text-gray-500 group-focus-within:text-green-600"
+    }`}>{icon}</div>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      className={`w-full pl-12 pr-4 py-4 rounded-xl border-2 transition-all duration-300 ${
+        isDarkMode
+          ? 'bg-gray-700/50 border-gray-600 text-white'
+          : 'bg-gray-50 border-gray-300 text-gray-800'
+      } ${
+        isTouched && error
+          ? 'border-red-500 focus:ring-2 focus:ring-red-500/50'
+          : `focus:ring-2 focus:ring-green-500/50 focus:border-green-500`
+      }`}
+      required
+    />
+    {isTouched && error && (
+      <p className="text-red-500 text-xs mt-1 ml-1 animate-fade-in-up">{error}</p>
+    )}
+  </div>
+));
+
+const Signup = () => {
+  const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    phoneNumber: ""
+  });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+
+    if (!formData.username) newErrors.username = "Username is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email address";
+    }
+    if (!formData.phoneNumber) newErrors.phoneNumber = "Phone number is required";
+
+    if (
+      !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(formData.password)
+    ) {
+      newErrors.password = "Password must be 8+ characters, with an uppercase letter, a number, and a special character.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleBlur = useCallback((e) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    
+    // Only validate the specific field that was blurred
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      
+      if (name === 'username' && !formData.username) {
+        newErrors.username = "Username is required";
+      } else if (name === 'username') {
+        delete newErrors.username;
+      }
+      
+      if (name === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Invalid email address";
+      } else if (name === 'email') {
+        delete newErrors.email;
+      }
+      
+      if (name === 'phoneNumber' && !formData.phoneNumber) {
+        newErrors.phoneNumber = "Phone number is required";
+      } else if (name === 'phoneNumber') {
+        delete newErrors.phoneNumber;
+      }
+      
+      if (name === 'password' && !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(formData.password)) {
+        newErrors.password = "Password must be 8+ characters, with an uppercase letter, a number, and a special character.";
+      } else if (name === 'password') {
+        delete newErrors.password;
+      }
+      
+      return newErrors;
+    });
+  }, [formData]);
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    setTouched({
+      username: true,
+      email: true,
+      password: true,
+      phoneNumber: true
+    });
+
+    if (!validateForm()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Form',
+        text: 'Please correct the errors before submitting.',
+        background: isDarkMode ? '#374151' : '#ffffff',
+        color: isDarkMode ? '#ffffff' : '#000000',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/api/user/register`,
+        formData
+      );
+
+      // Auto-login after successful registration
+      if (response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("userData", JSON.stringify(response.data.user));
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Registration Successful!',
+        text: 'Welcome to Vistelligence! You are now logged in.',
+        confirmButtonColor: '#16a34a',
+        background: isDarkMode ? '#374151' : '#ffffff',
+        color: isDarkMode ? '#ffffff' : '#000000',
+      });
+      
+      // Navigate directly to main page
+      navigate("/");
+
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred while registering. Please try again.";
+      Swal.fire({
+        icon: 'error',
+        title: 'Registration Failed',
+        text: errorMessage,
+        background: isDarkMode ? '#374151' : '#ffffff',
+        color: isDarkMode ? '#ffffff' : '#000000',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [formData, validateForm, isDarkMode, navigate]);
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
+
+  return (
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      isDarkMode 
+        ? "bg-gradient-to-br from-gray-900 via-green-900 to-gray-900" 
+        : "bg-gradient-to-br from-green-50 via-white to-emerald-50"
+    }`}>
+      {/* Floating Particles */}
+      <FloatingParticles count={25} isDarkMode={isDarkMode} />
+      
+      <Navbar />
+      
+      {/* Hero Section */}
+      <div className="text-center py-8 px-4 relative z-10">
+        <div className="flex justify-center items-center mb-6">
+          <div className="relative">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30" 
+                : "bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/40"
+            } animate-pulse pulse-ring`}>
+              <FaGlobe className="text-2xl text-white animate-spin-slow" />
+            </div>
+            <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full ${
+              isDarkMode ? "bg-blue-400" : "bg-blue-500"
+            } animate-bounce`}>
+              <FaStar className="text-sm text-white" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <h1 className={`text-5xl font-extrabold bg-gradient-to-r ${
+              isDarkMode 
+                ? "from-green-400 via-emerald-400 to-blue-400" 
+                : "from-green-600 via-emerald-600 to-blue-600"
+            } bg-clip-text text-transparent animate-gradient-x`}>
+              Vistelligence
+            </h1>
+            <div className={`h-1 w-full mt-2 rounded-full ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-green-400 via-emerald-400 to-blue-400" 
+                : "bg-gradient-to-r from-green-500 via-emerald-500 to-blue-500"
+            } animate-pulse`}></div>
+          </div>
+        </div>
+        
+        <p className={`text-xl font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} max-w-3xl mx-auto leading-relaxed animate-fade-in-up`}>
+          <span className="typewriter inline-block">
+            Your intelligent partner for visa applications.
+          </span>
+          <br />
+          <span className={`font-bold ${isDarkMode ? "text-green-400" : "text-green-600"} animate-fade-in-up animation-delay-400`}>
+            Trusted by thousands of travelers worldwide.
+          </span>
+        </p>
+        
+        {/* Trust Indicators with animations */}
+        <div className="flex justify-center items-center mt-8 space-x-8 animate-fade-in-up animation-delay-200">
+          <div className={`flex items-center p-3 rounded-lg transition-all duration-300 hover:scale-105 hover-card ${
+            isDarkMode ? "bg-gray-800/50 hover:bg-gray-800/70" : "bg-white/50 hover:bg-white/70"
+          } shadow-lg glass`}>
+            <FaShieldAlt className={`text-2xl mr-3 ${isDarkMode ? "text-green-400" : "text-green-600"} animate-pulse`} />
+            <div className="text-left">
+              <div className={`font-bold text-sm ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                Secure & Reliable
+              </div>
+              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Bank-level security
+              </div>
+            </div>
+          </div>
+          
+          <div className={`flex items-center p-3 rounded-lg transition-all duration-300 hover:scale-105 hover-card ${
+            isDarkMode ? "bg-gray-800/50 hover:bg-gray-800/70" : "bg-white/50 hover:bg-white/70"
+          } shadow-lg glass`}>
+            <FaCheckCircle className={`text-2xl mr-3 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"} animate-pulse`} />
+            <div className="text-left">
+              <div className={`font-bold text-sm ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                99% Success Rate
+              </div>
+              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Guaranteed approval
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-grow flex items-center justify-center p-4 relative z-10">
+        <div className={`w-full max-w-md mx-auto rounded-2xl shadow-2xl p-8 transition-all duration-300 animate-fade-in-up ${
+          isDarkMode 
+            ? "bg-gray-800/90 backdrop-blur-sm shadow-green-500/20 border border-gray-700" 
+            : "bg-white/95 backdrop-blur-sm shadow-gray-300/50 border border-gray-200"
+        } glass`}>
+          <div className="text-center mb-8">
+            <div className={`inline-flex items-center justify-center w-20 h-20 mb-4 rounded-full ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30" 
+                : "bg-gradient-to-r from-green-500 to-emerald-500 shadow-green-500/20"
+            } pulse-ring`}>
+              <FaUserPlus className="text-4xl text-white" />
+            </div>
+            <h2 className={`text-3xl font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+              Create Account
+            </h2>
+            <p className={`mt-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+              Join Vistelligence and start your visa journey today.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <InputField
+              name="username"
+              type="text"
+              placeholder="Username"
+              icon={<FaUser />}
+              value={formData.username}
+              error={errors.username}
+              isTouched={touched.username}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              isDarkMode={isDarkMode}
+            />
+
+            <InputField
+              name="email"
+              type="email"
+              placeholder="Email Address"
+              icon={<FaEnvelope />}
+              value={formData.email}
+              error={errors.email}
+              isTouched={touched.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              isDarkMode={isDarkMode}
+            />
+
+            <InputField
+              name="phoneNumber"
+              type="tel"
+              placeholder="Phone Number"
+              icon={<FaPhone />}
+              value={formData.phoneNumber}
+              error={errors.phoneNumber}
+              isTouched={touched.phoneNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              isDarkMode={isDarkMode}
+            />
+
+            <InputField
+              name="password"
+              type="password"
+              placeholder="Password"
+              icon={<FaLock />}
+              value={formData.password}
+              error={errors.password}
+              isTouched={touched.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              isDarkMode={isDarkMode}
+            />
+
+            {/* Password Strength Indicator */}
+            {touched.password && (
+              <PasswordStrength password={formData.password} isDarkMode={isDarkMode} />
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              }`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <FaSpinner className="animate-spin mr-2" />
+                  Creating account...
+                </div>
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <div className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className={`font-semibold hover:underline transition-colors duration-300 ${
+                  isDarkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-700"
+                }`}
+              >
+                Sign in here
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Signup;

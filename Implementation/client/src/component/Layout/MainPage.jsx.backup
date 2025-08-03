@@ -1,0 +1,151 @@
+import React, { useState, useEffect, useContext } from "react";
+import axios from "axios";
+import PostingCard from "./PostingCard";
+import SideFilter from "./SideFilter";
+import { ThemeContext } from "../../App";
+import { FaFilter } from "react-icons/fa";
+
+const MainPage = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryName, setCategoryName] = useState("");
+  const { theme } = useContext(ThemeContext);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      try {
+        const url = selectedCategory
+          ? `http://localhost:8080/api/post/posts?category=${selectedCategory}`
+          : "http://localhost:8080/api/post/posts";
+        const response = await axios.get(url);
+        setPosts(response.data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to fetch posts. Please try again later.");
+        console.error("Error fetching posts:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [selectedCategory]);
+
+  const handleFilter = (categoryId, name) => {
+    setSelectedCategory(categoryId);
+    setCategoryName(name);
+    if (isFilterOpen) {
+      setIsFilterOpen(false);
+    }
+  };
+
+  const handleClearFilter = () => {
+    setSelectedCategory(null);
+    setCategoryName("");
+  };
+
+  const toggleFilter = () => {
+    setIsFilterOpen(!isFilterOpen);
+  };
+
+  return (
+    <div
+      className={`flex flex-col md:flex-row min-h-screen ${
+        theme === "dark"
+          ? "bg-gray-900 text-white"
+          : "bg-gray-100 text-gray-900"
+      } transition-colors duration-300`}
+    >
+      {/* Mobile Filter Button */}
+      <div className="md:hidden p-4">
+        <button
+          onClick={toggleFilter}
+          className={`p-2 rounded-md ${
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          }`}
+        >
+          <FaFilter />
+        </button>
+      </div>
+
+      {/* Sidebar */}
+      {isFilterOpen && (
+        <div className="fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 md:hidden">
+          <SideFilter
+            onFilter={handleFilter}
+            onClear={handleClearFilter}
+            selectedCategory={selectedCategory}
+          />
+        </div>
+      )}
+
+      <div className="hidden md:block md:w-1/4 lg:w-1/5 xl:w-1/6 p-4">
+        <SideFilter
+          onFilter={handleFilter}
+          onClear={handleClearFilter}
+          selectedCategory={selectedCategory}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="w-full md:w-3/4 lg:w-4/5 xl:w-5/6 p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          {selectedCategory && (
+            <div className="flex items-center justify-between bg-blue-100 dark:bg-blue-900/50 p-3 rounded-lg">
+              <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
+                Filtered by: {categoryName}
+              </h2>
+              <button
+                onClick={handleClearFilter}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 animate-pulse"
+              >
+                <div className="h-40 bg-gray-300 dark:bg-gray-700 rounded-md mb-4"></div>
+                <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-red-500 text-xl">{error}</p>
+          </div>
+        ) : posts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {posts.map((post) => (
+              <div key={post._id}>
+                <PostingCard post={post} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-semibold mb-2">No Posts Found</h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              There are no posts in the category "{categoryName}". Try
+              selecting another category or clearing the filter.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MainPage;

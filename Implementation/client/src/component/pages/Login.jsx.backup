@@ -1,0 +1,281 @@
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useTheme } from "../../context/ThemeContext";
+import Swal from "sweetalert2";
+import { FaEnvelope, FaLock, FaSignInAlt, FaSpinner, FaUserPlus, FaGlobe, FaShieldAlt, FaCheckCircle } from "react-icons/fa";
+import Navbar from "../Layout/Navbar";
+import FloatingParticles from "../Layout/FloatingParticles";
+import { BASE_URL } from '../../const';
+
+const Login = () => {
+  const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(`${BASE_URL}/api/user/login`, formData);
+
+      if (response.status === 200) {
+        const { token, user } = response.data;
+
+        if (user.isBlocked) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Account Blocked',
+            text: 'This account is blocked and cannot access the site.',
+            background: isDarkMode ? '#374151' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+          });
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("userData", JSON.stringify(user));
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Login Successful!',
+          text: 'Welcome back!',
+          timer: 1500,
+          showConfirmButton: false,
+          background: isDarkMode ? '#374151' : '#ffffff',
+          color: isDarkMode ? '#ffffff' : '#000000',
+        });
+
+        if (user.role === "admin") {
+          navigate("/report");
+        } else {
+          navigate("/");
+        }
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Login failed. Check your credentials and try again.";
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: errorMessage,
+        background: isDarkMode ? '#374151' : '#ffffff',
+        color: isDarkMode ? '#ffffff' : '#000000',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      isDarkMode 
+        ? "bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900" 
+        : "bg-gradient-to-br from-blue-50 via-white to-indigo-50"
+    }`}>
+      {/* Floating Particles */}
+      <FloatingParticles count={20} isDarkMode={isDarkMode} />
+      
+      <Navbar />
+      
+      {/* Hero Section */}
+      <div className="text-center py-8 px-4 relative z-10">
+        <div className="flex justify-center items-center mb-6">
+          <div className="relative">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-blue-400 to-indigo-500 shadow-lg shadow-blue-500/30" 
+                : "bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/40"
+            } animate-pulse pulse-ring`}>
+              <FaGlobe className="text-2xl text-white animate-spin-slow" />
+            </div>
+            <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full ${
+              isDarkMode ? "bg-green-400" : "bg-green-500"
+            } animate-bounce`}>
+              <FaCheckCircle className="text-sm text-white" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <h1 className={`text-5xl font-extrabold bg-gradient-to-r ${
+              isDarkMode 
+                ? "from-blue-400 via-indigo-400 to-green-400" 
+                : "from-blue-600 via-indigo-600 to-green-600"
+            } bg-clip-text text-transparent animate-gradient-x`}>
+              Vistelligence
+            </h1>
+            <div className={`h-1 w-full mt-2 rounded-full ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-blue-400 via-indigo-400 to-green-400" 
+                : "bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500"
+            } animate-pulse`}></div>
+          </div>
+        </div>
+        
+        <p className={`text-xl font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} max-w-3xl mx-auto leading-relaxed animate-fade-in-up`}>
+          <span className="typewriter inline-block">
+            Your intelligent partner for visa applications.
+          </span>
+          <br />
+          <span className={`font-bold ${isDarkMode ? "text-blue-400" : "text-blue-600"} animate-fade-in-up animation-delay-400`}>
+            Trusted by thousands of travelers worldwide.
+          </span>
+        </p>
+        
+        {/* Trust Indicators with animations */}
+        <div className="flex justify-center items-center mt-8 space-x-8 animate-fade-in-up animation-delay-200">
+          <div className={`flex items-center p-3 rounded-lg transition-all duration-300 hover:scale-105 hover-card ${
+            isDarkMode ? "bg-gray-800/50 hover:bg-gray-800/70" : "bg-white/50 hover:bg-white/70"
+          } shadow-lg glass`}>
+            <FaShieldAlt className={`text-2xl mr-3 ${isDarkMode ? "text-green-400" : "text-green-600"} animate-pulse`} />
+            <div className="text-left">
+              <div className={`font-bold text-sm ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                Secure & Reliable
+              </div>
+              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Bank-level security
+              </div>
+            </div>
+          </div>
+          
+          <div className={`flex items-center p-3 rounded-lg transition-all duration-300 hover:scale-105 hover-card ${
+            isDarkMode ? "bg-gray-800/50 hover:bg-gray-800/70" : "bg-white/50 hover:bg-white/70"
+          } shadow-lg glass`}>
+            <FaCheckCircle className={`text-2xl mr-3 ${isDarkMode ? "text-blue-400" : "text-blue-600"} animate-pulse`} />
+            <div className="text-left">
+              <div className={`font-bold text-sm ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                99% Success Rate
+              </div>
+              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Guaranteed approval
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-grow flex items-center justify-center p-4 relative z-10">
+        <div className={`w-full max-w-md mx-auto rounded-2xl shadow-2xl p-8 transition-all duration-300 animate-fade-in-up ${
+          isDarkMode 
+            ? "bg-gray-800/90 backdrop-blur-sm shadow-blue-500/20 border border-gray-700" 
+            : "bg-white/95 backdrop-blur-sm shadow-gray-300/50 border border-gray-200"
+        } glass`}>
+          <div className="text-center mb-8">
+            <div className={`inline-flex items-center justify-center w-20 h-20 mb-4 rounded-full ${
+              isDarkMode 
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30" 
+                : "bg-gradient-to-r from-blue-500 to-indigo-500 shadow-blue-500/20"
+            } pulse-ring`}>
+              <FaSignInAlt className="text-4xl text-white" />
+            </div>
+            <h2 className={`text-3xl font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+              Welcome Back!
+            </h2>
+            <p className={`mt-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+              Sign in to access your personalized visa assistance.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="relative group">
+              <FaEnvelope className={`absolute top-1/2 left-4 -translate-y-1/2 transition-colors duration-300 ${
+                isDarkMode ? "text-gray-400 group-focus-within:text-blue-400" : "text-gray-500 group-focus-within:text-blue-600"
+              }`} />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email Address"
+                className={`w-full pl-12 pr-4 py-4 rounded-xl border-2 transition-all duration-300 ${
+                  isDarkMode 
+                    ? "bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500" 
+                    : "bg-gray-50 border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                }`}
+                required
+              />
+            </div>
+
+            <div className="relative group">
+              <FaLock className={`absolute top-1/2 left-4 -translate-y-1/2 transition-colors duration-300 ${
+                isDarkMode ? "text-gray-400 group-focus-within:text-blue-400" : "text-gray-500 group-focus-within:text-blue-600"
+              }`} />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Password"
+                className={`w-full pl-12 pr-4 py-4 rounded-xl border-2 transition-all duration-300 ${
+                  isDarkMode 
+                    ? "bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500" 
+                    : "bg-gray-50 border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                }`}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg animate-fade-in-up">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              }`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <FaSpinner className="animate-spin mr-2" />
+                  Signing in...
+                </div>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center space-y-2">
+            <Link
+              to="/forgetpass"
+              className={`block text-sm hover:underline transition-colors duration-300 ${
+                isDarkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"
+              }`}
+            >
+              Forgot your password?
+            </Link>
+            
+            <div className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className={`font-semibold hover:underline transition-colors duration-300 ${
+                  isDarkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"
+                }`}
+              >
+                Sign up here
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
