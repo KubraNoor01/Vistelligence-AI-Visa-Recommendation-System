@@ -1,4 +1,6 @@
 # 🌍 Vistelligence
+> Prototype: https://vistelligence.netlify.app/
+> 
 
 AI-Powered Visa Recommendation & Approval Prediction Platform
 
@@ -209,7 +211,7 @@ The repository includes screenshots of:
 - Admin Dashboard
 - Report Management
 
-> *(Add screenshots inside the `/screenshots` folder and reference them here.)*
+> Prototype: https://vistelligence.netlify.app/
 
 -----------------------------------
 
