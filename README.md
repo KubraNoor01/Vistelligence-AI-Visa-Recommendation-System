@@ -1,6 +1,6 @@
 # 🌍 Vistelligence
-> Prototype: https://vistelligence.netlify.app/
-> 📂 Project Documentation: https://github.com/KubraNoor01/Vistelligence-AI-Visa-Recommendation-System/tree/main/Documentation
+- Prototype: https://vistelligence.netlify.app/
+- 📂 Project Documentation: https://github.com/KubraNoor01/Vistelligence-AI-Visa-Recommendation-System/tree/main/Documentation
 
 AI-Powered Visa Recommendation & Approval Prediction Platform
 
